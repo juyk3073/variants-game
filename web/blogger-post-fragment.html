@@ -1,0 +1,719 @@
+<!-- 육목(Connect 6) 게임 - Blogger 게시글 HTML 보기에 이 전체를 붙여넣으세요 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --page-bg-1: #ede2cd;
+  --page-bg-2: #cdb27e;
+  --card-bg: #fbf6ec;
+  --ink: #34281a;
+  --ink-soft: #8a7458;
+  --line: #e6d9bd;
+
+  --board-1: #e8cf9c;
+  --board-2: #c79f5e;
+  --board-line: rgba(74, 51, 26, 0.55);
+
+  --black-1: #5a5a5a;
+  --black-2: #0a0a0a;
+  --white-1: #ffffff;
+  --white-2: #d9d9d9;
+
+  --accent: #a8471f;
+  --accent-soft: #f3ded0;
+  --active-glow: 0 0 0 3px var(--accent-soft), 0 8px 20px -8px rgba(168, 71, 31, 0.45);
+
+  --good: #22c55e;
+  --warn: #f59e0b;
+  --bad: #ef4444;
+
+  --radius-lg: 22px;
+  --radius-md: 14px;
+
+  --font-display: "Gowun Batang", "Noto Serif KR", serif;
+  --font-body: "Noto Sans KR", "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.5), transparent 55%),
+    linear-gradient(160deg, var(--page-bg-1), var(--page-bg-2) 85%);
+  min-height: 100vh;
+}
+
+.page {
+  display: flex;
+  justify-content: center;
+  padding: 32px 14px 48px;
+}
+
+.card {
+  width: 100%;
+  max-width: 620px;
+  background:
+    repeating-linear-gradient(178deg, rgba(74, 51, 26, 0.02) 0px, rgba(74, 51, 26, 0.02) 1px, transparent 1px, transparent 5px),
+    var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px -24px rgba(58, 44, 26, 0.35), 0 2px 8px rgba(58, 44, 26, 0.06);
+  padding: 28px 22px 22px;
+  border: 1px solid rgba(74, 51, 26, 0.08);
+}
+
+.header { text-align: center; margin-bottom: 18px; }
+
+.header h1 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.header h1 .en {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.rules {
+  margin: 0 auto;
+  max-width: 480px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.rules strong { color: var(--accent); }
+
+.scoreboard {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.panel {
+  flex: 1;
+  background: #f7f3ea;
+  border-radius: var(--radius-md);
+  padding: 12px 10px 10px;
+  text-align: center;
+  border: 1px solid var(--line);
+  transition: box-shadow 0.25s ease, transform 0.25s ease, background 0.25s ease;
+}
+
+.panel.active {
+  background: #fffaf0;
+  box-shadow: var(--active-glow);
+  transform: translateY(-2px);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.panel.active .panel-head { color: var(--ink); }
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid rgba(0,0,0,0.15);
+}
+.dot-black { background: radial-gradient(circle at 35% 30%, #6a6a6a, #0a0a0a 70%); }
+.dot-white { background: radial-gradient(circle at 35% 30%, #ffffff, #d5d5d5 70%); }
+
+.score {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+.status {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  min-height: 18px;
+}
+.panel.active .status { color: var(--accent); }
+
+.timer-track {
+  margin-top: 8px;
+  height: 7px;
+  border-radius: 999px;
+  background: #e9e1cf;
+  overflow: hidden;
+}
+.timer-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: var(--good);
+  transition: width 1s linear, background-color 0.4s ease;
+}
+.timer-fill.warn { background: var(--warn); }
+.timer-fill.bad { background: var(--bad); }
+
+.timer-text {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.board-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(91, 64, 37, 0.25), 0 10px 24px -14px rgba(58, 44, 26, 0.5);
+}
+
+canvas#board {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(135deg, var(--board-1), var(--board-2));
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid rgba(74, 51, 26, 0.15);
+  cursor: pointer;
+  background: var(--card-bg);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 24px;
+  border-radius: 999px;
+  transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.btn:hover { background: var(--accent-soft); border-color: rgba(168, 71, 31, 0.3); }
+.btn:active { transform: scale(0.96); }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #7c3413);
+  border-color: transparent;
+  color: #fff;
+}
+.btn-primary:hover { background: linear-gradient(135deg, #c25a2c, var(--accent)); }
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(30, 22, 10, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.overlay.show { opacity: 1; pointer-events: auto; }
+
+.overlay-box {
+  background: #fffdf8;
+  border-radius: var(--radius-md);
+  padding: 26px 30px;
+  text-align: center;
+  box-shadow: 0 20px 40px -12px rgba(0,0,0,0.4);
+  transform: translateY(8px) scale(0.96);
+  transition: transform 0.25s ease;
+}
+.overlay.show .overlay-box { transform: translateY(0) scale(1); }
+
+.overlay-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 420px) {
+  .card { padding: 20px 14px 16px; }
+  .header h1 { font-size: 22px; }
+  .scoreboard { gap: 6px; }
+  .panel { padding: 10px 6px 8px; }
+  .name { font-size: 13px; }
+}
+
+</style>
+
+<div class="page">
+    <div class="card">
+      <header class="header">
+        <h1>육목 <span class="en">Connect&nbsp;6</span></h1>
+        <p class="rules">
+          첫 수는 <strong>1개</strong>, 이후 각자 턴마다 <strong>2개씩</strong> 번갈아 놓습니다.
+          가로·세로·대각선으로 <strong>6개</strong>를 먼저 이으면 승리!
+        </p>
+      </header>
+
+      <section class="scoreboard">
+        <div class="panel" id="panel-black" data-player="black">
+          <div class="panel-head">
+            <span class="dot dot-black"></span>
+            <span class="name">흑돌</span>
+          </div>
+          <div class="score" id="score-black">0승</div>
+          <div class="status" id="status-black">대기 중</div>
+          <div class="timer-track">
+            <div class="timer-fill" id="timer-fill-black"></div>
+          </div>
+          <div class="timer-text" id="timer-text-black">30s</div>
+        </div>
+
+        <div class="panel" id="panel-white" data-player="white">
+          <div class="panel-head">
+            <span class="dot dot-white"></span>
+            <span class="name">백돌</span>
+          </div>
+          <div class="score" id="score-white">0승</div>
+          <div class="status" id="status-white">대기 중</div>
+          <div class="timer-track">
+            <div class="timer-fill" id="timer-fill-white"></div>
+          </div>
+          <div class="timer-text" id="timer-text-white">30s</div>
+        </div>
+      </section>
+
+      <section class="board-wrap" id="board-wrap">
+        <canvas id="board"></canvas>
+        <div class="overlay" id="overlay">
+          <div class="overlay-box">
+            <div class="overlay-title" id="overlay-title">게임 종료</div>
+            <button class="btn btn-primary" id="overlay-restart">다시하기</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="controls">
+        <button class="btn" id="reset-btn">새 게임</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  // --- 게임 설정 ---
+  const BOARD_SIZE = 19;
+  const WIN_CONDITION = 6;
+  const TIMER_SECONDS = 30;
+  const PADDING_RATIO = 0.03; // 캔버스 너비 대비 여백 비율
+
+  const EMPTY = 0;
+  const BLACK = 1;
+  const WHITE = 2;
+
+  // --- DOM ---
+  const canvas = document.getElementById("board");
+  const ctx = canvas.getContext("2d");
+  const boardWrap = document.getElementById("board-wrap");
+  const overlay = document.getElementById("overlay");
+  const overlayTitle = document.getElementById("overlay-title");
+  const overlayRestart = document.getElementById("overlay-restart");
+  const resetBtn = document.getElementById("reset-btn");
+
+  const panels = {
+    [BLACK]: document.getElementById("panel-black"),
+    [WHITE]: document.getElementById("panel-white"),
+  };
+  const statusEls = {
+    [BLACK]: document.getElementById("status-black"),
+    [WHITE]: document.getElementById("status-white"),
+  };
+  const scoreEls = {
+    [BLACK]: document.getElementById("score-black"),
+    [WHITE]: document.getElementById("score-white"),
+  };
+  const timerFillEls = {
+    [BLACK]: document.getElementById("timer-fill-black"),
+    [WHITE]: document.getElementById("timer-fill-white"),
+  };
+  const timerTextEls = {
+    [BLACK]: document.getElementById("timer-text-black"),
+    [WHITE]: document.getElementById("timer-text-white"),
+  };
+
+  // --- 상태 ---
+  let cssSize = 0;
+  let padding = 0;
+  let cellSize = 0;
+
+  let board = [];
+  let currentPlayer = BLACK;
+  let stonesToPlace = 1;
+  let lastMoves = [];
+  let gameOver = false;
+  let scores = { [BLACK]: 0, [WHITE]: 0 };
+  let remainingTime = TIMER_SECONDS;
+  let timerId = null;
+  let hoverCell = null;
+
+  function initBoardArray() {
+    board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(EMPTY));
+  }
+
+  // --- 캔버스 크기 계산 ---
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    cssSize = boardWrap.clientWidth;
+    canvas.width = Math.round(cssSize * dpr);
+    canvas.height = Math.round(cssSize * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    padding = cssSize * PADDING_RATIO + (cssSize / (BOARD_SIZE - 1)) * 0.5;
+    cellSize = (cssSize - padding * 2) / (BOARD_SIZE - 1);
+    render();
+  }
+
+  function cellCenter(row, col) {
+    return {
+      x: padding + col * cellSize,
+      y: padding + row * cellSize,
+    };
+  }
+
+  function pointToCell(x, y) {
+    const col = Math.round((x - padding) / cellSize);
+    const row = Math.round((y - padding) / cellSize);
+    if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return null;
+    const { x: cx, y: cy } = cellCenter(row, col);
+    if (Math.hypot(x - cx, y - cy) > cellSize * 0.55) return null;
+    return { row, col };
+  }
+
+  // --- 렌더링 ---
+  function render() {
+    ctx.clearRect(0, 0, cssSize, cssSize);
+    drawGrid();
+    drawStarPoints();
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        if (board[r][c] !== EMPTY) drawStone(r, c, board[r][c]);
+      }
+    }
+    drawLastMoveMarker();
+    drawHoverGhost();
+  }
+
+  function drawGrid() {
+    ctx.strokeStyle = "rgba(91, 64, 37, 0.55)";
+    ctx.lineWidth = 1;
+    const start = padding;
+    const end = padding + (BOARD_SIZE - 1) * cellSize;
+    for (let i = 0; i < BOARD_SIZE; i++) {
+      const pos = padding + i * cellSize;
+      ctx.beginPath();
+      ctx.moveTo(pos, start);
+      ctx.lineTo(pos, end);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(start, pos);
+      ctx.lineTo(end, pos);
+      ctx.stroke();
+    }
+  }
+
+  function drawStarPoints() {
+    if (BOARD_SIZE !== 19) return;
+    const pts = [3, 9, 15];
+    ctx.fillStyle = "rgba(91, 64, 37, 0.65)";
+    for (const r of pts) {
+      for (const c of pts) {
+        const { x, y } = cellCenter(r, c);
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(2, cellSize * 0.08), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  function drawStone(row, col, player, alpha = 1) {
+    const { x, y } = cellCenter(row, col);
+    const r = cellSize * 0.42;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    ctx.beginPath();
+    ctx.arc(x + r * 0.15, y + r * 0.22, r, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.fill();
+
+    const grad = ctx.createRadialGradient(
+      x - r * 0.35, y - r * 0.4, r * 0.15,
+      x, y, r
+    );
+    if (player === BLACK) {
+      grad.addColorStop(0, "#6b6b6b");
+      grad.addColorStop(1, "#050505");
+    } else {
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(1, "#cfcfcf");
+    }
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    if (player === WHITE) {
+      ctx.strokeStyle = "rgba(0,0,0,0.25)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawLastMoveMarker() {
+    if (!lastMoves.length) return;
+    const { row, col } = lastMoves[lastMoves.length - 1];
+    const { x, y } = cellCenter(row, col);
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(2.5, cellSize * 0.1), 0, Math.PI * 2);
+    ctx.fillStyle = "#e63946";
+    ctx.fill();
+  }
+
+  function drawHoverGhost() {
+    if (gameOver || !hoverCell) return;
+    const { row, col } = hoverCell;
+    if (board[row][col] !== EMPTY) return;
+    const { x, y } = cellCenter(row, col);
+    const r = cellSize * 0.42;
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = currentPlayer === BLACK ? "rgba(10,10,10,0.65)" : "rgba(120,120,120,0.85)";
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // --- 상호작용 ---
+  function eventToBoardXY(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const point = evt.touches ? evt.touches[0] : evt;
+    const scale = cssSize / rect.width;
+    return {
+      x: (point.clientX - rect.left) * scale,
+      y: (point.clientY - rect.top) * scale,
+    };
+  }
+
+  function handleMove(evt) {
+    if (gameOver) return;
+    const { x, y } = eventToBoardXY(evt);
+    hoverCell = pointToCell(x, y);
+    render();
+  }
+
+  function handleLeave() {
+    hoverCell = null;
+    render();
+  }
+
+  function handleClick(evt) {
+    if (gameOver) return;
+    const { x, y } = eventToBoardXY(evt);
+    const cell = pointToCell(x, y);
+    if (!cell) return;
+    const { row, col } = cell;
+    if (board[row][col] !== EMPTY) return;
+    placeStone(row, col);
+  }
+
+  // --- 게임 로직 ---
+  function placeStone(row, col) {
+    board[row][col] = currentPlayer;
+    stonesToPlace -= 1;
+    lastMoves.push({ row, col });
+    render();
+
+    if (checkWin(row, col)) {
+      finishGame(`${playerLabel(currentPlayer)} 승리! 🎉`, currentPlayer);
+      return;
+    }
+    if (isBoardFull()) {
+      finishGame("무승부입니다", null);
+      return;
+    }
+
+    if (stonesToPlace === 0) {
+      switchPlayer();
+    } else {
+      updatePanels();
+    }
+  }
+
+  function playerLabel(p) {
+    return p === BLACK ? "흑돌" : "백돌";
+  }
+
+  function checkWin(row, col) {
+    const stone = board[row][col];
+    const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    for (const [dr, dc] of dirs) {
+      let count = 1;
+      for (let i = 1; i < WIN_CONDITION; i++) {
+        const r = row + dr * i, c = col + dc * i;
+        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === stone) count++;
+        else break;
+      }
+      for (let i = 1; i < WIN_CONDITION; i++) {
+        const r = row - dr * i, c = col - dc * i;
+        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === stone) count++;
+        else break;
+      }
+      if (count >= WIN_CONDITION) return true;
+    }
+    return false;
+  }
+
+  function isBoardFull() {
+    return board.every((row) => row.every((v) => v !== EMPTY));
+  }
+
+  function switchPlayer() {
+    currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+    stonesToPlace = 2;
+    updatePanels();
+    startTimer();
+  }
+
+  function finishGame(message, winner) {
+    gameOver = true;
+    stopTimer();
+    if (winner) scores[winner] += 1;
+    updateScores();
+    updatePanels();
+    showOverlay(message);
+  }
+
+  // --- UI 갱신 ---
+  function updatePanels() {
+    for (const p of [BLACK, WHITE]) {
+      const isActive = p === currentPlayer && !gameOver;
+      panels[p].classList.toggle("active", isActive);
+      statusEls[p].textContent = gameOver
+        ? "-"
+        : isActive
+        ? `놓을 돌 ${stonesToPlace}개`
+        : "대기 중";
+    }
+  }
+
+  function updateScores() {
+    scoreEls[BLACK].textContent = `${scores[BLACK]}승`;
+    scoreEls[WHITE].textContent = `${scores[WHITE]}승`;
+  }
+
+  function showOverlay(message) {
+    overlayTitle.textContent = message;
+    overlay.classList.add("show");
+  }
+
+  function hideOverlay() {
+    overlay.classList.remove("show");
+  }
+
+  // --- 타이머 ---
+  function startTimer() {
+    stopTimer();
+    remainingTime = TIMER_SECONDS;
+    updateTimerDisplay();
+    timerId = setInterval(() => {
+      remainingTime -= 1;
+      if (remainingTime <= 0) {
+        switchPlayer();
+        return;
+      }
+      updateTimerDisplay();
+    }, 1000);
+  }
+
+  function stopTimer() {
+    if (timerId) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+  }
+
+  function updateTimerDisplay() {
+    const ratio = remainingTime / TIMER_SECONDS;
+    const activeFill = timerFillEls[currentPlayer];
+    const idleFill = timerFillEls[currentPlayer === BLACK ? WHITE : BLACK];
+
+    activeFill.style.width = `${Math.max(0, ratio * 100)}%`;
+    activeFill.classList.toggle("bad", ratio <= 0.3);
+    activeFill.classList.toggle("warn", ratio > 0.3 && ratio <= 0.6);
+    timerTextEls[currentPlayer].textContent = `${remainingTime}s`;
+
+    idleFill.style.width = "100%";
+    idleFill.classList.remove("warn", "bad");
+    timerTextEls[currentPlayer === BLACK ? WHITE : BLACK].textContent = `${TIMER_SECONDS}s`;
+  }
+
+  // --- 게임 리셋 ---
+  function resetGame() {
+    stopTimer();
+    initBoardArray();
+    currentPlayer = BLACK;
+    stonesToPlace = 1;
+    lastMoves = [];
+    gameOver = false;
+    hoverCell = null;
+    hideOverlay();
+    updatePanels();
+    render();
+    startTimer();
+  }
+
+  // --- 이벤트 바인딩 ---
+  canvas.addEventListener("mousemove", handleMove);
+  canvas.addEventListener("mouseleave", handleLeave);
+  canvas.addEventListener("click", handleClick);
+  canvas.addEventListener("touchstart", (e) => { e.preventDefault(); handleMove(e); }, { passive: false });
+  canvas.addEventListener("touchend", (e) => { e.preventDefault(); handleClick(e); }, { passive: false });
+
+  resetBtn.addEventListener("click", resetGame);
+  overlayRestart.addEventListener("click", resetGame);
+
+  window.addEventListener("resize", resizeCanvas);
+
+  // --- 시작 ---
+  initBoardArray();
+  resizeCanvas();
+  updateScores();
+  resetGame();
+})();
+
+</script>
