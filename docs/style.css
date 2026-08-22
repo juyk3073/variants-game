@@ -89,6 +89,83 @@ body {
 }
 .rules strong { color: var(--accent); }
 
+/* 모드 선택 화면 */
+.mode-select {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 460px;
+  margin: 0 auto 4px;
+}
+@media (min-width: 480px) {
+  .mode-select { flex-direction: row; }
+}
+.mode-btn {
+  appearance: none;
+  flex: 1;
+  padding: 18px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(74, 51, 26, 0.15);
+  background: var(--card-bg);
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.mode-btn:hover { background: var(--accent-soft); border-color: rgba(168, 71, 31, 0.3); transform: translateY(-2px); }
+.mode-btn:active { transform: scale(0.98); }
+.mode-btn .mode-title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.mode-btn .mode-sub { display: block; font-size: 12px; color: var(--ink-soft); }
+.mode-btn.primary {
+  background: linear-gradient(135deg, var(--accent), #7c3413);
+  border-color: transparent;
+  color: #fff;
+}
+.mode-btn.primary:hover { background: linear-gradient(135deg, #c25a2c, var(--accent)); }
+.mode-btn.primary .mode-sub { color: rgba(255, 255, 255, 0.85); }
+
+/* 게임 화면 상단 바 */
+.top-bar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 10px;
+}
+.btn-back { font-size: 12px; padding: 6px 14px; }
+
+/* 온라인 방 설정 패널 */
+.room-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+  background: #f1ebd9;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--ink-soft);
+}
+.room-input {
+  width: 110px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  text-align: center;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+.room-msg {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: bold;
+}
+
 .scoreboard {
   display: flex;
   gap: 10px;

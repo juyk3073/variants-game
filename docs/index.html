@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>육목 (Connect 6) - 온라인/오프라인 2인용 보드게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+<!-- Firebase 8 호환 SDK 로드 (온라인 대전용) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <header class="header">
+        <h1>육목 <span class="en">Connect&nbsp;6</span></h1>
+        <p class="rules">
+          첫 수는 <strong>1개</strong>, 이후 각자 턴마다 <strong>2개씩</strong> 번갈아 놓습니다.
+          가로·세로·대각선으로 <strong>6개</strong>를 먼저 이으면 승리!
+        </p>
+      </header>
+
+      <!-- 모드 선택 화면 -->
+      <div class="mode-select" id="mode-select">
+        <button class="mode-btn primary" id="btn-mode-offline" type="button">
+          <span class="mode-title">오프라인 대전</span>
+          <span class="mode-sub">한 화면에서 둘이 번갈아 플레이</span>
+        </button>
+        <button class="mode-btn" id="btn-mode-online" type="button">
+          <span class="mode-title">온라인 대전</span>
+          <span class="mode-sub">방을 만들거나 코드로 참여</span>
+        </button>
+      </div>
+
+      <!-- 게임 화면 (모드 선택 후 표시) -->
+      <div id="game-screen" style="display:none;">
+        <div class="top-bar">
+          <button class="btn btn-back" id="btn-back-menu" type="button">← 모드 선택</button>
+        </div>
+
+        <!-- 온라인 전용: 방 만들기/참여 UI -->
+        <div class="room-bar" id="room-controls" style="display:none;">
+          <button class="btn btn-primary" id="btn-create-room" type="button">방 만들기</button>
+          <span>또는</span>
+          <input type="text" id="room-code-input" class="room-input" placeholder="방 코드" maxlength="5">
+          <button class="btn" id="btn-join-room" type="button">참여</button>
+        </div>
+        <div style="text-align:center; margin-bottom: 10px;" id="room-status-wrap">
+          <span class="room-msg" id="room-status-text">방을 만들거나 상대방의 코드를 입력하세요.</span>
+        </div>
+
+        <section class="scoreboard" id="scoreboard">
+          <div class="panel" id="panel-black" data-player="black">
+            <div class="panel-head">
+              <span class="dot dot-black"></span>
+              <span class="name" id="label-black">흑돌</span>
+            </div>
+            <div class="score" id="score-black">0승</div>
+            <div class="status" id="status-black">대기 중</div>
+            <div class="timer-track">
+              <div class="timer-fill" id="timer-fill-black"></div>
+            </div>
+            <div class="timer-text" id="timer-text-black">30s</div>
+          </div>
+
+          <div class="panel" id="panel-white" data-player="white">
+            <div class="panel-head">
+              <span class="dot dot-white"></span>
+              <span class="name" id="label-white">백돌</span>
+            </div>
+            <div class="score" id="score-white">0승</div>
+            <div class="status" id="status-white">대기 중</div>
+            <div class="timer-track">
+              <div class="timer-fill" id="timer-fill-white"></div>
+            </div>
+            <div class="timer-text" id="timer-text-white">30s</div>
+          </div>
+        </section>
+
+        <section class="board-wrap" id="board-wrap">
+          <canvas id="board"></canvas>
+          <div class="overlay" id="overlay">
+            <div class="overlay-box">
+              <div class="overlay-title" id="overlay-title">게임 종료</div>
+              <button class="btn btn-primary" id="overlay-restart" type="button">다시하기</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 오프라인 전용: 새 게임 버튼 -->
+        <div class="controls" id="offline-controls">
+          <button class="btn" id="reset-btn" type="button">새 게임</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="script.js"></script>
+</body>
+</html>
