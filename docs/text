@@ -1,6 +1,6 @@
 메모
 index.html / style.css / script.js — GitHub Pages로 호스팅하는 실제 서비스 버전 (온라인/오프라인 모드 선택 포함).
-  수정 후 git push하면 https://juyk3073.github.io/variants-game/web/ (Pages 설정에 따라 경로 다를 수 있음) 에 반영됨.
+  수정 후 git push하면 https://juyk3073.github.io/variants-game/docs/ (Pages 설정에 따라 경로 다를 수 있음) 에 반영됨.
   이 주소를 블로그 글에 링크/iframe으로 올림.
 blogger.html / blogger-post-fragment.html — 예전에 Blogger "HTML 보기"에 직접 붙여넣던 구버전 방식. 이제 GitHub Pages 링크로 대체해서 더 이상 사용 안 함 (참고용으로만 보관).
 

@@ -93,10 +93,14 @@
 
   // 온라인 전용 상태
   let currentRoomId = null;
-  let myRole = null; // BLACK(방장) 또는 WHITE(참여자)
+  let myBaseRole = null; // BLACK(방장) 또는 WHITE(참여자) - 접속 내내 고정되는 원래 자리
+  let myRole = null; // 이번 라운드에 내가 두는 색. round 홀짝에 따라 myBaseRole과 뒤바뀔 수 있음
   let roomRef = null;
   let turnStartedAt = null; // 현재 턴이 시작된 서버 시각(ms) - 양쪽 클라이언트가 동일한 값을 봄
   let roomStatus = null; // 'waiting' | 'playing' - 상대가 들어오기 전에는 착수를 막기 위한 상태
+  let knownRound = -1; // 마지막으로 반영한 라운드 번호 - 바뀌면 판을 새로 시작
+  let opponentLeftShown = false; // "상대방이 나갔습니다" 오버레이를 이미 띄웠는지
+  let overlayAction = "newRoom"; // 'rematch' | 'newRoom' - 온라인 종료 오버레이 버튼 동작
 
   function initBoardArray() {
     board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(EMPTY));
@@ -360,6 +364,10 @@
     updateScores();
     updatePanels();
     overlayTitle.textContent = message;
+    if (mode === "online") {
+      overlayRestart.textContent = "다시하기";
+      overlayAction = "rematch";
+    }
     overlay.classList.add("show");
   }
 
@@ -470,15 +478,17 @@
   // 방을 의도적으로 떠날 때(모드 선택으로 나가기, 새 방 만들기 등) 상대에게
   // "나갔다"고 알리기 위해 내 presence 값을 false로 남긴다.
   // 탭을 닫거나 네트워크가 끊기는 경우는 onDisconnect가 자동으로 처리한다.
+  // presence는 라운드마다 바뀌는 색(myRole)이 아니라 접속 자리(myBaseRole) 기준이다.
   function detachRoom() {
-    if (roomRef && myRole) {
-      const key = presenceKey(myRole);
+    if (roomRef && myBaseRole) {
+      const key = presenceKey(myBaseRole);
       roomRef.child(key).onDisconnect().cancel();
       roomRef.child(key).set(false);
     }
     if (roomRef) roomRef.off();
     roomRef = null;
     currentRoomId = null;
+    myBaseRole = null;
     myRole = null;
     roomStatus = null;
   }
@@ -488,7 +498,48 @@
     stopTimer();
     updatePanels();
     overlayTitle.textContent = "상대방이 방을 나갔습니다.";
+    overlayRestart.textContent = "새 방 만들기";
+    overlayAction = "newRoom";
     overlay.classList.add("show");
+  }
+
+  // 같은 방에서 새 라운드를 시작한다. round 홀짝으로 흑/백을 서로 바꿔서
+  // 방을 새로 만들지 않고도 이어서 대전할 수 있게 한다.
+  function enterRound(newRound) {
+    knownRound = newRound;
+    myRole = newRound % 2 === 0 ? myBaseRole : (myBaseRole === BLACK ? WHITE : BLACK);
+
+    initBoardArray();
+    lastMoves = [];
+    gameOver = false;
+    hoverCell = null;
+    turnStartedAt = null;
+    stopTimer();
+    overlay.classList.remove("show");
+
+    if (myRole === BLACK) {
+      labelBlack.textContent = "흑돌 (나)";
+      labelWhite.textContent = "백돌 (상대)";
+    } else {
+      labelBlack.textContent = "흑돌 (상대)";
+      labelWhite.textContent = "백돌 (나)";
+    }
+
+    updatePanels();
+    render();
+  }
+
+  // 방은 그대로 두고 같은 상대와 흑/백만 바꿔서 새 라운드를 시작한다.
+  function rematchOnline() {
+    if (!roomRef) return;
+    roomRef.update({
+      round: knownRound + 1,
+      status: "playing",
+      currentPlayer: BLACK,
+      stonesToPlace: 1,
+      lastMove: null,
+      turnStartedAt: null,
+    });
   }
 
   function placeStoneOnline(row, col) {
@@ -517,8 +568,11 @@
     detachRoom();
     const roomId = Math.random().toString(36).substring(2, 7).toUpperCase();
     currentRoomId = roomId;
+    myBaseRole = BLACK;
     myRole = BLACK;
     roomStatus = "waiting";
+    knownRound = -1;
+    opponentLeftShown = false;
 
     roomRef = db.ref("rooms/" + roomId);
     roomRef.set({
@@ -528,6 +582,7 @@
       stonesToPlace: 1,
       lastMove: null,
       turnStartedAt: null, // 흑돌이 첫 수를 둘 때 비로소 타이머가 시작됨
+      round: 0,
       blackConnected: true,
       whiteConnected: null,
     });
@@ -535,10 +590,9 @@
 
     listenToRoom();
     roomStatusText.textContent = `방 코드: [ ${roomId} ] 상대방에게 코드를 공유하세요!`;
-    labelBlack.textContent = "흑돌 (나)";
-    labelWhite.textContent = "백돌 (상대)";
     overlayRestart.textContent = "새 방 만들기";
-    initOnlineGame();
+    overlayAction = "newRoom";
+    enterRound(0);
   }
 
   function joinRoom() {
@@ -550,6 +604,7 @@
 
     detachRoom();
     currentRoomId = code;
+    myBaseRole = WHITE;
     myRole = WHITE;
     roomRef = db.ref("rooms/" + code);
 
@@ -559,15 +614,16 @@
         detachRoom();
         return;
       }
+      knownRound = -1;
+      opponentLeftShown = false;
       roomRef.update({ status: "playing", whiteConnected: true });
       roomRef.child("whiteConnected").onDisconnect().set(false);
       roomStatus = "playing";
       listenToRoom();
       roomStatusText.textContent = `[ ${code} ] 방에 입장했습니다! 게임을 시작합니다.`;
-      labelBlack.textContent = "흑돌 (상대)";
-      labelWhite.textContent = "백돌 (나)";
       overlayRestart.textContent = "새 방 만들기";
-      initOnlineGame();
+      overlayAction = "newRoom";
+      enterRound(0);
     });
   }
 
@@ -579,14 +635,20 @@
       const justStarted = roomStatus !== "playing" && data.status === "playing";
       roomStatus = data.status;
 
-      if (justStarted && myRole === BLACK) {
+      if (justStarted && myBaseRole === BLACK) {
         roomStatusText.textContent = `상대방이 입장했습니다! (방 코드: ${currentRoomId})`;
       }
 
-      const opponentConnected = myRole === BLACK ? data.whiteConnected : data.blackConnected;
-      if (roomStatus === "playing" && opponentConnected === false && !gameOver) {
+      const opponentConnected = myBaseRole === BLACK ? data.whiteConnected : data.blackConnected;
+      if (roomStatus === "playing" && opponentConnected === false && !opponentLeftShown) {
+        opponentLeftShown = true;
         handleOpponentLeft();
         return;
+      }
+
+      const dataRound = data.round || 0;
+      if (dataRound !== knownRound) {
+        enterRound(dataRound);
       }
 
       if (data.lastMove) {
@@ -624,20 +686,6 @@
     });
   }
 
-  function initOnlineGame() {
-    initBoardArray();
-    lastMoves = [];
-    gameOver = false;
-    hoverCell = null;
-    currentPlayer = BLACK;
-    stonesToPlace = 1;
-    turnStartedAt = null;
-    stopTimer();
-    overlay.classList.remove("show");
-    updatePanels();
-    render();
-  }
-
   // ============ 모드 전환 ============
   function enterOffline() {
     mode = "offline";
@@ -667,6 +715,7 @@
     roomStatusText.textContent = "방을 만들거나 상대방의 코드를 입력하세요.";
     roomCodeInput.value = "";
     overlayRestart.textContent = "새 방 만들기";
+    overlayAction = "newRoom";
 
     initBoardArray();
     lastMoves = [];
@@ -700,8 +749,12 @@
   resetBtn.addEventListener("click", resetOfflineGame);
   overlayRestart.addEventListener("click", () => {
     overlay.classList.remove("show");
-    if (mode === "offline") resetOfflineGame();
-    else if (mode === "online") createRoom();
+    if (mode === "offline") {
+      resetOfflineGame();
+    } else if (mode === "online") {
+      if (overlayAction === "rematch") rematchOnline();
+      else createRoom();
+    }
   });
 
   btnModeOffline.addEventListener("click", enterOffline);
