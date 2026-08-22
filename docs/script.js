@@ -96,6 +96,7 @@
   let myRole = null; // BLACK(방장) 또는 WHITE(참여자)
   let roomRef = null;
   let turnStartedAt = null; // 현재 턴이 시작된 서버 시각(ms) - 양쪽 클라이언트가 동일한 값을 봄
+  let roomStatus = null; // 'waiting' | 'playing' - 상대가 들어오기 전에는 착수를 막기 위한 상태
 
   function initBoardArray() {
     board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(EMPTY));
@@ -222,7 +223,7 @@
   function canHover() {
     if (!mode || gameOver || !hoverCell) return false;
     if (board[hoverCell.row][hoverCell.col] !== EMPTY) return false;
-    if (mode === "online") return !!currentRoomId && currentPlayer === myRole;
+    if (mode === "online") return roomStatus === "playing" && currentPlayer === myRole;
     return true;
   }
 
@@ -311,7 +312,7 @@
 
   function updatePanels() {
     for (const p of [BLACK, WHITE]) {
-      const isActive = p === currentPlayer && !gameOver && (mode !== "online" || !!currentRoomId);
+      const isActive = p === currentPlayer && !gameOver && (mode !== "online" || roomStatus === "playing");
       panels[p].classList.toggle("active", isActive);
       statusEls[p].textContent = gameOver
         ? "-"
@@ -467,10 +468,11 @@
     roomRef = null;
     currentRoomId = null;
     myRole = null;
+    roomStatus = null;
   }
 
   function placeStoneOnline(row, col) {
-    if (!currentRoomId || currentPlayer !== myRole) return;
+    if (roomStatus !== "playing" || currentPlayer !== myRole) return;
 
     const nextStones = stonesToPlace - 1;
     let nextPlayer = currentPlayer;
@@ -496,6 +498,7 @@
     const roomId = Math.random().toString(36).substring(2, 7).toUpperCase();
     currentRoomId = roomId;
     myRole = BLACK;
+    roomStatus = "waiting";
 
     roomRef = db.ref("rooms/" + roomId);
     roomRef.set({
@@ -534,6 +537,7 @@
         return;
       }
       roomRef.update({ status: "playing" });
+      roomStatus = "playing";
       listenToRoom();
       roomStatusText.textContent = `[ ${code} ] 방에 입장했습니다! 게임을 시작합니다.`;
       labelBlack.textContent = "흑돌 (상대)";
@@ -548,7 +552,10 @@
       const data = snapshot.val();
       if (!data) return;
 
-      if (data.status === "playing" && myRole === BLACK) {
+      const justStarted = roomStatus !== "playing" && data.status === "playing";
+      roomStatus = data.status;
+
+      if (justStarted && myRole === BLACK) {
         roomStatusText.textContent = `상대방이 입장했습니다! (방 코드: ${currentRoomId})`;
       }
 
@@ -573,7 +580,15 @@
       currentPlayer = data.currentPlayer;
       stonesToPlace = data.stonesToPlace;
       turnStartedAt = data.turnStartedAt || Date.now();
-      startOnlineTimer();
+
+      if (roomStatus === "playing") {
+        startOnlineTimer();
+      } else {
+        stopTimer();
+        remainingTime = TIMER_SECONDS;
+        updateTimerDisplay();
+      }
+
       updatePanels();
       render();
     });
