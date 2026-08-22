@@ -1,11 +1,17 @@
+메모
 index.html / style.css / script.js — 개발·보관용 3파일 분리 버전
 blogger.html — 완전한 단일 HTML 문서 (로컬에서 더블클릭해 바로 테스트 가능)
 blogger-post-fragment.html — Blogger에 붙여넣을 버전. 게시글 작성 화면에서 "HTML 보기"로 전환한 뒤 이 파일 내용을 통째로 붙여넣으면 됩
 
-visual studeo github upload
+visual studeo github upload: 프로젝트당 1회
 git init
 git add .
 git commit -m "first commit"
 git branch -M main
 git remote add origin https://github.com/juyk3073/variants-game.git
 git push -u origin main
+
+코드 수정후 반복
+git add .
+git commit -m "수정내용"
+git push

@@ -2,6 +2,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+<!-- Firebase 8 호환 SDK 로드 (온라인 대전용) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
 <style>
 :root {
   --page-bg-1: #ede2cd;
@@ -93,6 +98,83 @@ body {
   color: var(--ink-soft);
 }
 .rules strong { color: var(--accent); }
+
+/* 모드 선택 화면 */
+.mode-select {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 460px;
+  margin: 0 auto 4px;
+}
+@media (min-width: 480px) {
+  .mode-select { flex-direction: row; }
+}
+.mode-btn {
+  appearance: none;
+  flex: 1;
+  padding: 18px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(74, 51, 26, 0.15);
+  background: var(--card-bg);
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.mode-btn:hover { background: var(--accent-soft); border-color: rgba(168, 71, 31, 0.3); transform: translateY(-2px); }
+.mode-btn:active { transform: scale(0.98); }
+.mode-btn .mode-title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.mode-btn .mode-sub { display: block; font-size: 12px; color: var(--ink-soft); }
+.mode-btn.primary {
+  background: linear-gradient(135deg, var(--accent), #7c3413);
+  border-color: transparent;
+  color: #fff;
+}
+.mode-btn.primary:hover { background: linear-gradient(135deg, #c25a2c, var(--accent)); }
+.mode-btn.primary .mode-sub { color: rgba(255, 255, 255, 0.85); }
+
+/* 게임 화면 상단 바 */
+.top-bar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 10px;
+}
+.btn-back { font-size: 12px; padding: 6px 14px; }
+
+/* 온라인 방 설정 패널 */
+.room-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+  background: #f1ebd9;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--ink-soft);
+}
+.room-input {
+  width: 110px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  text-align: center;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+.room-msg {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: bold;
+}
 
 .scoreboard {
   display: flex;
@@ -275,46 +357,77 @@ canvas#board {
         </p>
       </header>
 
-      <section class="scoreboard">
-        <div class="panel" id="panel-black" data-player="black">
-          <div class="panel-head">
-            <span class="dot dot-black"></span>
-            <span class="name">흑돌</span>
-          </div>
-          <div class="score" id="score-black">0승</div>
-          <div class="status" id="status-black">대기 중</div>
-          <div class="timer-track">
-            <div class="timer-fill" id="timer-fill-black"></div>
-          </div>
-          <div class="timer-text" id="timer-text-black">30s</div>
+      <!-- 모드 선택 화면 -->
+      <div class="mode-select" id="mode-select">
+        <button class="mode-btn primary" id="btn-mode-offline" type="button">
+          <span class="mode-title">오프라인 대전</span>
+          <span class="mode-sub">한 화면에서 둘이 번갈아 플레이</span>
+        </button>
+        <button class="mode-btn" id="btn-mode-online" type="button">
+          <span class="mode-title">온라인 대전</span>
+          <span class="mode-sub">방을 만들거나 코드로 참여</span>
+        </button>
+      </div>
+
+      <!-- 게임 화면 (모드 선택 후 표시) -->
+      <div id="game-screen" style="display:none;">
+        <div class="top-bar">
+          <button class="btn btn-back" id="btn-back-menu" type="button">← 모드 선택</button>
         </div>
 
-        <div class="panel" id="panel-white" data-player="white">
-          <div class="panel-head">
-            <span class="dot dot-white"></span>
-            <span class="name">백돌</span>
-          </div>
-          <div class="score" id="score-white">0승</div>
-          <div class="status" id="status-white">대기 중</div>
-          <div class="timer-track">
-            <div class="timer-fill" id="timer-fill-white"></div>
-          </div>
-          <div class="timer-text" id="timer-text-white">30s</div>
+        <!-- 온라인 전용: 방 만들기/참여 UI -->
+        <div class="room-bar" id="room-controls" style="display:none;">
+          <button class="btn btn-primary" id="btn-create-room" type="button">방 만들기</button>
+          <span>또는</span>
+          <input type="text" id="room-code-input" class="room-input" placeholder="방 코드" maxlength="5">
+          <button class="btn" id="btn-join-room" type="button">참여</button>
         </div>
-      </section>
-
-      <section class="board-wrap" id="board-wrap">
-        <canvas id="board"></canvas>
-        <div class="overlay" id="overlay">
-          <div class="overlay-box">
-            <div class="overlay-title" id="overlay-title">게임 종료</div>
-            <button class="btn btn-primary" id="overlay-restart">다시하기</button>
-          </div>
+        <div style="text-align:center; margin-bottom: 10px;" id="room-status-wrap">
+          <span class="room-msg" id="room-status-text">방을 만들거나 상대방의 코드를 입력하세요.</span>
         </div>
-      </section>
 
-      <div class="controls">
-        <button class="btn" id="reset-btn">새 게임</button>
+        <section class="scoreboard" id="scoreboard">
+          <div class="panel" id="panel-black" data-player="black">
+            <div class="panel-head">
+              <span class="dot dot-black"></span>
+              <span class="name" id="label-black">흑돌</span>
+            </div>
+            <div class="score" id="score-black">0승</div>
+            <div class="status" id="status-black">대기 중</div>
+            <div class="timer-track">
+              <div class="timer-fill" id="timer-fill-black"></div>
+            </div>
+            <div class="timer-text" id="timer-text-black">30s</div>
+          </div>
+
+          <div class="panel" id="panel-white" data-player="white">
+            <div class="panel-head">
+              <span class="dot dot-white"></span>
+              <span class="name" id="label-white">백돌</span>
+            </div>
+            <div class="score" id="score-white">0승</div>
+            <div class="status" id="status-white">대기 중</div>
+            <div class="timer-track">
+              <div class="timer-fill" id="timer-fill-white"></div>
+            </div>
+            <div class="timer-text" id="timer-text-white">30s</div>
+          </div>
+        </section>
+
+        <section class="board-wrap" id="board-wrap">
+          <canvas id="board"></canvas>
+          <div class="overlay" id="overlay">
+            <div class="overlay-box">
+              <div class="overlay-title" id="overlay-title">게임 종료</div>
+              <button class="btn btn-primary" id="overlay-restart" type="button">다시하기</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 오프라인 전용: 새 게임 버튼 -->
+        <div class="controls" id="offline-controls">
+          <button class="btn" id="reset-btn" type="button">새 게임</button>
+        </div>
       </div>
     </div>
   </div>
@@ -323,11 +436,26 @@ canvas#board {
 (() => {
   "use strict";
 
+  // --- Firebase 설정 (온라인 대전용) ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyDw0p2uhVWe-KSdm9vLjp8b6hxtTpZHX_U",
+    authDomain: "online-variant-game.firebaseapp.com",
+    databaseURL: "https://online-variant-game-default-rtdb.firebaseio.com",
+    projectId: "online-variant-game",
+    storageBucket: "online-variant-game.firebasestorage.app",
+    messagingSenderId: "257827695949",
+    appId: "1:257827695949:web:cf1aeeaf481be832c61b04",
+    measurementId: "G-2D7FWZDRQJ"
+  };
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  const db = firebase.database();
+
   // --- 게임 설정 ---
   const BOARD_SIZE = 19;
   const WIN_CONDITION = 6;
   const TIMER_SECONDS = 30;
-  const PADDING_RATIO = 0.03; // 캔버스 너비 대비 여백 비율
 
   const EMPTY = 0;
   const BLACK = 1;
@@ -341,6 +469,23 @@ canvas#board {
   const overlayTitle = document.getElementById("overlay-title");
   const overlayRestart = document.getElementById("overlay-restart");
   const resetBtn = document.getElementById("reset-btn");
+
+  const modeSelect = document.getElementById("mode-select");
+  const gameScreen = document.getElementById("game-screen");
+  const btnModeOffline = document.getElementById("btn-mode-offline");
+  const btnModeOnline = document.getElementById("btn-mode-online");
+  const btnBackMenu = document.getElementById("btn-back-menu");
+
+  const offlineControls = document.getElementById("offline-controls");
+  const roomControls = document.getElementById("room-controls");
+  const roomStatusWrap = document.getElementById("room-status-wrap");
+  const roomStatusText = document.getElementById("room-status-text");
+  const btnCreateRoom = document.getElementById("btn-create-room");
+  const btnJoinRoom = document.getElementById("btn-join-room");
+  const roomCodeInput = document.getElementById("room-code-input");
+
+  const labelBlack = document.getElementById("label-black");
+  const labelWhite = document.getElementById("label-white");
 
   const panels = {
     [BLACK]: document.getElementById("panel-black"),
@@ -363,7 +508,8 @@ canvas#board {
     [WHITE]: document.getElementById("timer-text-white"),
   };
 
-  // --- 상태 ---
+  // --- 공용 상태 ---
+  let mode = null; // 'offline' | 'online'
   let cssSize = 0;
   let padding = 0;
   let cellSize = 0;
@@ -373,10 +519,18 @@ canvas#board {
   let stonesToPlace = 1;
   let lastMoves = [];
   let gameOver = false;
+  let hoverCell = null;
+
+  // 오프라인 전용 상태
   let scores = { [BLACK]: 0, [WHITE]: 0 };
   let remainingTime = TIMER_SECONDS;
   let timerId = null;
-  let hoverCell = null;
+
+  // 온라인 전용 상태
+  let currentRoomId = null;
+  let myRole = null; // BLACK(방장) 또는 WHITE(참여자)
+  let roomRef = null;
+  let turnStartedAt = null; // 현재 턴이 시작된 서버 시각(ms) - 양쪽 클라이언트가 동일한 값을 봄
 
   function initBoardArray() {
     board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(EMPTY));
@@ -390,7 +544,7 @@ canvas#board {
     canvas.height = Math.round(cssSize * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    padding = cssSize * PADDING_RATIO + (cssSize / (BOARD_SIZE - 1)) * 0.5;
+    padding = cssSize * 0.03 + (cssSize / (BOARD_SIZE - 1)) * 0.5;
     cellSize = (cssSize - padding * 2) / (BOARD_SIZE - 1);
     render();
   }
@@ -457,13 +611,11 @@ canvas#board {
     }
   }
 
-  function drawStone(row, col, player, alpha = 1) {
+  function drawStone(row, col, player) {
     const { x, y } = cellCenter(row, col);
     const r = cellSize * 0.42;
 
     ctx.save();
-    ctx.globalAlpha = alpha;
-
     ctx.beginPath();
     ctx.arc(x + r * 0.15, y + r * 0.22, r, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -502,10 +654,16 @@ canvas#board {
     ctx.fill();
   }
 
+  function canHover() {
+    if (!mode || gameOver || !hoverCell) return false;
+    if (board[hoverCell.row][hoverCell.col] !== EMPTY) return false;
+    if (mode === "online") return !!currentRoomId && currentPlayer === myRole;
+    return true;
+  }
+
   function drawHoverGhost() {
-    if (gameOver || !hoverCell) return;
+    if (!canHover()) return;
     const { row, col } = hoverCell;
-    if (board[row][col] !== EMPTY) return;
     const { x, y } = cellCenter(row, col);
     const r = cellSize * 0.42;
     ctx.save();
@@ -530,7 +688,7 @@ canvas#board {
   }
 
   function handleMove(evt) {
-    if (gameOver) return;
+    if (!mode || gameOver) return;
     const { x, y } = eventToBoardXY(evt);
     hoverCell = pointToCell(x, y);
     render();
@@ -542,17 +700,64 @@ canvas#board {
   }
 
   function handleClick(evt) {
-    if (gameOver) return;
+    if (!mode || gameOver) return;
     const { x, y } = eventToBoardXY(evt);
     const cell = pointToCell(x, y);
     if (!cell) return;
     const { row, col } = cell;
     if (board[row][col] !== EMPTY) return;
-    placeStone(row, col);
+
+    if (mode === "offline") {
+      placeStoneOffline(row, col);
+    } else {
+      placeStoneOnline(row, col);
+    }
   }
 
-  // --- 게임 로직 ---
-  function placeStone(row, col) {
+  // --- 공용 게임 로직 ---
+  function playerLabel(p) {
+    return p === BLACK ? "흑돌" : "백돌";
+  }
+
+  function checkWin(row, col) {
+    // 정확히 6개가 연속될 때만 승리 (7개 이상 이어진 "장목"은 승리로 인정하지 않음)
+    const stone = board[row][col];
+    const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    for (const [dr, dc] of dirs) {
+      let count = 1;
+      for (let i = 1; ; i++) {
+        const r = row + dr * i, c = col + dc * i;
+        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === stone) count++;
+        else break;
+      }
+      for (let i = 1; ; i++) {
+        const r = row - dr * i, c = col - dc * i;
+        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === stone) count++;
+        else break;
+      }
+      if (count === WIN_CONDITION) return true;
+    }
+    return false;
+  }
+
+  function isBoardFull() {
+    return board.every((row) => row.every((v) => v !== EMPTY));
+  }
+
+  function updatePanels() {
+    for (const p of [BLACK, WHITE]) {
+      const isActive = p === currentPlayer && !gameOver && (mode !== "online" || !!currentRoomId);
+      panels[p].classList.toggle("active", isActive);
+      statusEls[p].textContent = gameOver
+        ? "-"
+        : isActive
+        ? `놓을 돌 ${stonesToPlace}개`
+        : "대기 중";
+    }
+  }
+
+  // ============ 오프라인 모드 ============
+  function placeStoneOffline(row, col) {
     board[row][col] = currentPlayer;
     stonesToPlace -= 1;
     lastMoves.push({ row, col });
@@ -568,67 +773,28 @@ canvas#board {
     }
 
     if (stonesToPlace === 0) {
-      switchPlayer();
+      switchPlayerOffline();
     } else {
       updatePanels();
     }
   }
 
-  function playerLabel(p) {
-    return p === BLACK ? "흑돌" : "백돌";
-  }
-
-  function checkWin(row, col) {
-    const stone = board[row][col];
-    const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
-    for (const [dr, dc] of dirs) {
-      let count = 1;
-      for (let i = 1; i < WIN_CONDITION; i++) {
-        const r = row + dr * i, c = col + dc * i;
-        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === stone) count++;
-        else break;
-      }
-      for (let i = 1; i < WIN_CONDITION; i++) {
-        const r = row - dr * i, c = col - dc * i;
-        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === stone) count++;
-        else break;
-      }
-      if (count >= WIN_CONDITION) return true;
-    }
-    return false;
-  }
-
-  function isBoardFull() {
-    return board.every((row) => row.every((v) => v !== EMPTY));
-  }
-
-  function switchPlayer() {
+  function switchPlayerOffline() {
     currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
     stonesToPlace = 2;
     updatePanels();
-    startTimer();
+    startTimer(switchPlayerOffline);
   }
 
+  // 오프라인/온라인 공용: 승패 처리 (점수판·타이머 UI가 두 모드에서 항상 동일하게 동작)
   function finishGame(message, winner) {
     gameOver = true;
     stopTimer();
     if (winner) scores[winner] += 1;
     updateScores();
     updatePanels();
-    showOverlay(message);
-  }
-
-  // --- UI 갱신 ---
-  function updatePanels() {
-    for (const p of [BLACK, WHITE]) {
-      const isActive = p === currentPlayer && !gameOver;
-      panels[p].classList.toggle("active", isActive);
-      statusEls[p].textContent = gameOver
-        ? "-"
-        : isActive
-        ? `놓을 돌 ${stonesToPlace}개`
-        : "대기 중";
-    }
+    overlayTitle.textContent = message;
+    overlay.classList.add("show");
   }
 
   function updateScores() {
@@ -636,24 +802,23 @@ canvas#board {
     scoreEls[WHITE].textContent = `${scores[WHITE]}승`;
   }
 
-  function showOverlay(message) {
-    overlayTitle.textContent = message;
-    overlay.classList.add("show");
+  function resetScores() {
+    scores = { [BLACK]: 0, [WHITE]: 0 };
+    updateScores();
   }
 
-  function hideOverlay() {
-    overlay.classList.remove("show");
-  }
-
-  // --- 타이머 ---
-  function startTimer() {
+  // onExpire: 시간 초과 시 실행할 콜백. 오프라인은 자동으로 턴을 넘기고,
+  // 온라인은 서버(Firebase) 권한이 없어 강제로 턴을 넘기지 않고 0에서 멈춘다.
+  function startTimer(onExpire) {
     stopTimer();
     remainingTime = TIMER_SECONDS;
     updateTimerDisplay();
     timerId = setInterval(() => {
       remainingTime -= 1;
       if (remainingTime <= 0) {
-        switchPlayer();
+        updateTimerDisplay();
+        stopTimer();
+        if (onExpire) onExpire();
         return;
       }
       updateTimerDisplay();
@@ -682,8 +847,40 @@ canvas#board {
     timerTextEls[currentPlayer === BLACK ? WHITE : BLACK].textContent = `${TIMER_SECONDS}s`;
   }
 
-  // --- 게임 리셋 ---
-  function resetGame() {
+  // 온라인 전용: 두 클라이언트가 같은 turnStartedAt(서버 시각) 기준으로 남은 시간을 계산해
+  // 타이머가 정확히 동기화되도록 한다 (오프라인의 startTimer처럼 로컬에서 1초씩 깎지 않음).
+  function startOnlineTimer() {
+    stopTimer();
+    updateOnlineTimerTick();
+    timerId = setInterval(updateOnlineTimerTick, 1000);
+  }
+
+  function updateOnlineTimerTick() {
+    if (!turnStartedAt) return;
+    const elapsed = Math.floor((Date.now() - turnStartedAt) / 1000);
+    remainingTime = Math.max(0, TIMER_SECONDS - elapsed);
+    updateTimerDisplay();
+    if (remainingTime <= 0) {
+      stopTimer();
+      maybeSkipTimedOutTurn();
+    }
+  }
+
+  // 시간 초과된 턴을 넘긴다. 서버 권한 로직이 없으므로, 상대의 턴이 끝나기를
+  // "기다리는 쪽" 클라이언트가 대신 턴을 넘긴다 (매 순간 정확히 한쪽만 기다리는
+  // 입장이므로 두 클라이언트가 동시에 턴을 넘기는 경합은 생기지 않는다).
+  function maybeSkipTimedOutTurn() {
+    if (!currentRoomId || gameOver || myRole === currentPlayer) return;
+    const timedOutPlayer = currentPlayer;
+    const nextPlayer = timedOutPlayer === BLACK ? WHITE : BLACK;
+    roomRef.update({
+      currentPlayer: nextPlayer,
+      stonesToPlace: 2,
+      turnStartedAt: firebase.database.ServerValue.TIMESTAMP,
+    });
+  }
+
+  function resetOfflineGame() {
     stopTimer();
     initBoardArray();
     currentPlayer = BLACK;
@@ -691,10 +888,196 @@ canvas#board {
     lastMoves = [];
     gameOver = false;
     hoverCell = null;
-    hideOverlay();
+    overlay.classList.remove("show");
+    labelBlack.textContent = "흑돌";
+    labelWhite.textContent = "백돌";
     updatePanels();
     render();
-    startTimer();
+    startTimer(switchPlayerOffline);
+  }
+
+  // ============ 온라인 모드 ============
+  function detachRoom() {
+    if (roomRef) roomRef.off();
+    roomRef = null;
+    currentRoomId = null;
+    myRole = null;
+  }
+
+  function placeStoneOnline(row, col) {
+    if (!currentRoomId || currentPlayer !== myRole) return;
+
+    const nextStones = stonesToPlace - 1;
+    let nextPlayer = currentPlayer;
+    let newStonesToPlace = nextStones;
+
+    const update = {
+      lastMove: { row, col, player: myRole },
+    };
+
+    if (nextStones === 0) {
+      nextPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+      newStonesToPlace = 2;
+      update.turnStartedAt = firebase.database.ServerValue.TIMESTAMP; // 턴이 끝날 때만 시계 초기화
+    }
+
+    update.currentPlayer = nextPlayer;
+    update.stonesToPlace = newStonesToPlace;
+    roomRef.update(update);
+  }
+
+  function createRoom() {
+    detachRoom();
+    const roomId = Math.random().toString(36).substring(2, 7).toUpperCase();
+    currentRoomId = roomId;
+    myRole = BLACK;
+
+    roomRef = db.ref("rooms/" + roomId);
+    roomRef.set({
+      createdAt: Date.now(),
+      status: "waiting",
+      currentPlayer: BLACK,
+      stonesToPlace: 1,
+      lastMove: null,
+      turnStartedAt: firebase.database.ServerValue.TIMESTAMP,
+    });
+
+    listenToRoom();
+    roomStatusText.textContent = `방 코드: [ ${roomId} ] 상대방에게 코드를 공유하세요!`;
+    labelBlack.textContent = "흑돌 (나)";
+    labelWhite.textContent = "백돌 (상대)";
+    overlayRestart.textContent = "새 방 만들기";
+    initOnlineGame();
+  }
+
+  function joinRoom() {
+    const code = roomCodeInput.value.trim().toUpperCase();
+    if (!code) {
+      alert("방 코드를 입력하세요.");
+      return;
+    }
+
+    detachRoom();
+    currentRoomId = code;
+    myRole = WHITE;
+    roomRef = db.ref("rooms/" + code);
+
+    roomRef.once("value", (snapshot) => {
+      if (!snapshot.exists()) {
+        alert("존재하지 않는 방 번호입니다.");
+        detachRoom();
+        return;
+      }
+      roomRef.update({ status: "playing" });
+      listenToRoom();
+      roomStatusText.textContent = `[ ${code} ] 방에 입장했습니다! 게임을 시작합니다.`;
+      labelBlack.textContent = "흑돌 (상대)";
+      labelWhite.textContent = "백돌 (나)";
+      overlayRestart.textContent = "새 방 만들기";
+      initOnlineGame();
+    });
+  }
+
+  function listenToRoom() {
+    roomRef.on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      if (data.status === "playing" && myRole === BLACK) {
+        roomStatusText.textContent = `상대방이 입장했습니다! (방 코드: ${currentRoomId})`;
+      }
+
+      if (data.lastMove) {
+        const { row, col, player } = data.lastMove;
+        if (board[row][col] === EMPTY) {
+          board[row][col] = player;
+          lastMoves.push({ row, col });
+          render();
+
+          if (checkWin(row, col)) {
+            finishGame(player === myRole ? "승리하셨습니다! 🎉" : "패배하였습니다 😭", player);
+            return;
+          }
+          if (isBoardFull()) {
+            finishGame("무승부입니다", null);
+            return;
+          }
+        }
+      }
+
+      currentPlayer = data.currentPlayer;
+      stonesToPlace = data.stonesToPlace;
+      turnStartedAt = data.turnStartedAt || Date.now();
+      startOnlineTimer();
+      updatePanels();
+      render();
+    });
+  }
+
+  function initOnlineGame() {
+    initBoardArray();
+    lastMoves = [];
+    gameOver = false;
+    hoverCell = null;
+    currentPlayer = BLACK;
+    stonesToPlace = 1;
+    turnStartedAt = null;
+    stopTimer();
+    overlay.classList.remove("show");
+    updatePanels();
+    render();
+  }
+
+  // ============ 모드 전환 ============
+  function enterOffline() {
+    mode = "offline";
+    modeSelect.style.display = "none";
+    gameScreen.style.display = "";
+    roomControls.style.display = "none";
+    roomStatusWrap.style.display = "none";
+    offlineControls.style.display = "";
+    resetScores();
+    overlayRestart.textContent = "다시하기";
+    resizeCanvas();
+    resetOfflineGame();
+  }
+
+  function enterOnline() {
+    mode = "online";
+    modeSelect.style.display = "none";
+    gameScreen.style.display = "";
+    roomControls.style.display = "";
+    roomStatusWrap.style.display = "";
+    offlineControls.style.display = "none";
+    resetScores();
+
+    detachRoom();
+    labelBlack.textContent = "흑돌";
+    labelWhite.textContent = "백돌";
+    roomStatusText.textContent = "방을 만들거나 상대방의 코드를 입력하세요.";
+    roomCodeInput.value = "";
+    overlayRestart.textContent = "새 방 만들기";
+
+    initBoardArray();
+    lastMoves = [];
+    gameOver = false;
+    hoverCell = null;
+    currentPlayer = BLACK;
+    stonesToPlace = 1;
+    turnStartedAt = null;
+    stopTimer();
+    overlay.classList.remove("show");
+    updatePanels();
+    resizeCanvas();
+  }
+
+  function backToMenu() {
+    stopTimer();
+    detachRoom();
+    mode = null;
+    overlay.classList.remove("show");
+    gameScreen.style.display = "none";
+    modeSelect.style.display = "";
   }
 
   // --- 이벤트 바인딩 ---
@@ -704,16 +1087,24 @@ canvas#board {
   canvas.addEventListener("touchstart", (e) => { e.preventDefault(); handleMove(e); }, { passive: false });
   canvas.addEventListener("touchend", (e) => { e.preventDefault(); handleClick(e); }, { passive: false });
 
-  resetBtn.addEventListener("click", resetGame);
-  overlayRestart.addEventListener("click", resetGame);
+  resetBtn.addEventListener("click", resetOfflineGame);
+  overlayRestart.addEventListener("click", () => {
+    overlay.classList.remove("show");
+    if (mode === "offline") resetOfflineGame();
+    else if (mode === "online") createRoom();
+  });
 
-  window.addEventListener("resize", resizeCanvas);
+  btnModeOffline.addEventListener("click", enterOffline);
+  btnModeOnline.addEventListener("click", enterOnline);
+  btnBackMenu.addEventListener("click", backToMenu);
+  btnCreateRoom.addEventListener("click", createRoom);
+  btnJoinRoom.addEventListener("click", joinRoom);
+
+  window.addEventListener("resize", () => { if (mode) resizeCanvas(); });
 
   // --- 시작 ---
   initBoardArray();
-  resizeCanvas();
   updateScores();
-  resetGame();
 })();
 
 </script>
