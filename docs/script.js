@@ -463,12 +463,32 @@
   }
 
   // ============ 온라인 모드 ============
+  function presenceKey(role) {
+    return role === BLACK ? "blackConnected" : "whiteConnected";
+  }
+
+  // 방을 의도적으로 떠날 때(모드 선택으로 나가기, 새 방 만들기 등) 상대에게
+  // "나갔다"고 알리기 위해 내 presence 값을 false로 남긴다.
+  // 탭을 닫거나 네트워크가 끊기는 경우는 onDisconnect가 자동으로 처리한다.
   function detachRoom() {
+    if (roomRef && myRole) {
+      const key = presenceKey(myRole);
+      roomRef.child(key).onDisconnect().cancel();
+      roomRef.child(key).set(false);
+    }
     if (roomRef) roomRef.off();
     roomRef = null;
     currentRoomId = null;
     myRole = null;
     roomStatus = null;
+  }
+
+  function handleOpponentLeft() {
+    gameOver = true;
+    stopTimer();
+    updatePanels();
+    overlayTitle.textContent = "상대방이 방을 나갔습니다.";
+    overlay.classList.add("show");
   }
 
   function placeStoneOnline(row, col) {
@@ -507,8 +527,11 @@
       currentPlayer: BLACK,
       stonesToPlace: 1,
       lastMove: null,
-      turnStartedAt: firebase.database.ServerValue.TIMESTAMP,
+      turnStartedAt: null, // 흑돌이 첫 수를 둘 때 비로소 타이머가 시작됨
+      blackConnected: true,
+      whiteConnected: null,
     });
+    roomRef.child("blackConnected").onDisconnect().set(false);
 
     listenToRoom();
     roomStatusText.textContent = `방 코드: [ ${roomId} ] 상대방에게 코드를 공유하세요!`;
@@ -536,7 +559,8 @@
         detachRoom();
         return;
       }
-      roomRef.update({ status: "playing" });
+      roomRef.update({ status: "playing", whiteConnected: true });
+      roomRef.child("whiteConnected").onDisconnect().set(false);
       roomStatus = "playing";
       listenToRoom();
       roomStatusText.textContent = `[ ${code} ] 방에 입장했습니다! 게임을 시작합니다.`;
@@ -559,6 +583,12 @@
         roomStatusText.textContent = `상대방이 입장했습니다! (방 코드: ${currentRoomId})`;
       }
 
+      const opponentConnected = myRole === BLACK ? data.whiteConnected : data.blackConnected;
+      if (roomStatus === "playing" && opponentConnected === false && !gameOver) {
+        handleOpponentLeft();
+        return;
+      }
+
       if (data.lastMove) {
         const { row, col, player } = data.lastMove;
         if (board[row][col] === EMPTY) {
@@ -579,7 +609,7 @@
 
       currentPlayer = data.currentPlayer;
       stonesToPlace = data.stonesToPlace;
-      turnStartedAt = data.turnStartedAt || Date.now();
+      turnStartedAt = data.turnStartedAt || null; // 흑돌 첫 수 전에는 null - 타이머 대기
 
       if (roomStatus === "playing") {
         startOnlineTimer();
